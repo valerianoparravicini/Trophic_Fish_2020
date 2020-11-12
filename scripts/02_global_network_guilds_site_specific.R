@@ -1,7 +1,6 @@
-# ---------------------------------------------------------------------->> grp6 - multi-site
 
 
-diets <- read.csv("data/data_ISfull_grp_final_no_sp_no_wormy.csv", sep=",", dec=".", row.names=1, na = "NA") 
+diets <- read.csv("data/data_guts.csv", sep=",", dec=".", row.names=1, na = "NA") 
 
 #check_taxonomy <- rfishbase::validate_names(unique(diets$fish_sp))
 #unique(subset(diets$fish_sp, !(diets$fish_sp %in% check_taxonomy)))
@@ -25,7 +24,7 @@ diets$fish_sp <- dplyr::recode(diets$fish_sp,
 
 diets$sp_reg <- paste(diets$fish_sp, diets$site_code, sep="-")
 
-diets_p <- reshape::cast(diets, sp_reg ~ grp6, value = "quantity", fun.aggregate=sum)
+diets_p <- reshape::cast(diets, sp_reg ~ grp, value = "quantity", fun.aggregate=sum)
 diets_p[is.na(diets_p)] = 0
 
 diets_samplesize <- sapply(as.character(unique(diets_p$sp_reg)), function(x) {sum(diets[diets$sp_reg == x,]$nb_guts)})
@@ -145,12 +144,10 @@ test_multiple_clusters <- lapply(clust[,1][duplicated(clust[,1])], function(x) {
 })
 
 
-sum(test_multiple_clusters[,2]) - sum(test_multiple_clusters[,3])
-
 test_multiple_clusters <- do.call(rbind, test_multiple_clusters)
 
 
-
+sum(test_multiple_clusters[,2]) - sum(test_multiple_clusters[,3])
 
 
 

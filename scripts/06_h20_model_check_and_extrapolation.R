@@ -118,5 +118,5 @@ extrapolation <- data.frame(prey = extra_df$prey, predator = extra_df$predator, 
 
 test_extra <- reshape2::dcast(extrapolation, predator ~ prey, value.var = "interaction")
 
-write.csv2(test_extra, file="results/extrapolation_trophic_interactions.csv")
+write.csv2(test_extra, file="output/results/extrapolation_trophic_interactions.csv")
 
