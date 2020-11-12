@@ -1,12 +1,22 @@
 Package: TrophicFish2020
-Title: This repository contains all code to reproduce results and figures of the manuscript ADDD
+Title: Global gut content data synthesis and phylogeny delineate reef fish trophic guilds
 Version: 0.0.0.9000
 Authors@R: 
-    person(given = "Valeriano",
+    c(person(given = "Valeriano",
            family = "Parravicini",
            role = c("aut", "cre"),
-           email = "valeriano.parravicini@gmail.com")
+           email = "valeriano.parravicini@gmail.com"),
+      person(given = "Nina",
+           family = "Schiettekatte",
+           role = c("aut")),
+      person(given = "Simon",
+           family = "Brandl",
+           role = c("aut")))
 Description: 
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
+Imports:
+    ggplot2,
+    fishualize,
+    
