@@ -28,25 +28,7 @@ library(ggtree)
 
 Sys.setlocale("LC_MESSAGES", "en_US.utf8")
 
-plan <- 
-  drake_plan(
-    
-    ## agreements
-    classif = read.csv("data/experts_classification.csv", sep=",", dec=".", row.names = 1, na.strings = "NA"),
-    figure1 = make_plot1(classif),
-    figure2 = make_plot2,
-    
-    ## cluster analysis
-    # load diet data
-    diets = read.csv("data/data_ISfull_grp_final_no_sp_no_wormy.csv", sep=",", dec=".", row.names=1, na = "NA"),
-    # standardize diet data
-    diets_p = get_dietp(diets),
-    # run custer analysis
-    modules = cluster_analysis(diets_p),
-    # save results
-    result_mod_predators = write.csv(modules$mod_predators, "results/mod_predators.csv", row.names = FALSE),
-    result_mod_prey_items = write.csv(modules$mod_prey_items, "results/mod_prey_items.csv", row.names = FALSE),
-    
+
     # phylogenetic analysis
     diet_cat = load_and_clean(modules$mod_predators),
     tree = fishtree_complete_phylogeny(diet_cat$species),
@@ -59,5 +41,5 @@ plan <-
     extrapolation = extrapolate(b, r_phylo),
     delta_null = delta_nullm(dietcat, n = 200),
     adapt_extrapolation_cats(extrapolation)
-  )
+  
 

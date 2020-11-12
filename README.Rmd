@@ -13,23 +13,44 @@ knitr::opts_chunk$set(
 
 # Global gut content data synthesis and phylogeny delineate reef fish trophic guilds
 
-<!-- badges: start -->
-<!-- badges: end -->
+This repository contains code and data needed to reproduce the figures and result of the manuscript:
 
-The goal of Trophic_Fish_2020 is to ...
+FULL REFERENCE AND DOI
 
-What is special about using `README.Rmd` instead of just `README.md`? You can include R chunks like so:
+## Content
 
-```{r cars}
-summary(cars)
+The directory contains:     
+  - [:page\_facing\_up: DESCRIPTION](/DESCRIPTION):     
+  - [:page\_facing\_up: make.R](/make.R): Script to reproduce all parts of the project.     
+  - [:file\_folder: data](/data): Folder containing all data.   
+  - [:file\_folder: scripts](/scripts): Folder containing scripts to perform multiple parts of the analysis to produce results and figures.      
+  - [:file\_folder: output](/output): Folder containing all results and figures.     
+
+### scripts
+- **01_guilds_compare_experts.R**: We conducted a systematic review in the literature to collect information about how different authors have classified reef fish species into different trophic guilds. We could obtain 30 distinct classifications and this information is contained in the file “data/original_experts_classification.csv”. These data were then made comparable (see “data/converted_experts_classification.csv”. The script compares pairs of experts and quantify the agreement/disagreement among them.     
+- **02_global_network_guilds_site_specific.R**:    
+This script defines the diet for each combination of reef fish species and site. Then we used the method introduced by Becket (2016) to identify trophic guilds according to a maximization of the modularity of the weighted bipartite network. Once we identified the trophic guilds for each species x site combination we realized that in the vast majority of cases the same species was classified in the same way regardless the location of sampling.     
+        
+     
+Beckett, S.J. 2016 Improved community detection in weighted bipartite networks. Royal Society open science 3, 140536.      
+           
+- **03_global_network_guilds.R**:    
+Once we realized that, at our resolution, the trophic guilds for the same species in different locations were exactly the same, we decided to perform the same analysis at global level (i.e. combining ditar data for the same species coming from different sites) to define the final trophic guilds. This is what this script does.    
+
+
+- **04_trophic_interactions_calibration_dataset.R**        
+Once the guilds were defined we tested whether it was possible to directly predict the probability of interaction between reef fishes and the prey categories used. We did that using machine learning to predict trophic interactions according to the phylogenetic position of reef fishes and their body size. This script perform a series of preliminary analyses (i.e. definition of the most likely phylogenetic tree for reef fishes, extraction of phylogenetic eigenvector maps for reef fishes) that are needed to obtain the calibration dataset.    
+        
+
+- **05_h20_ensemble_model_calibration.R**    
+This script sets up a h2o cluster (https://www.h2o.ai) to predict the probability of trophic interaction between reef fish species and our prey categories. Then it uses the calibration dataset to perform an ensemble model composed of: boosted regression trees, extreme gradient boosting, random forest and a glm used as a super-learner.    
+
+
+- **06_h20_model_check_and_extrapolation.R**
+This script contains the functions needed to check the model performance (e.g. AUC, TSS) and to extrapolate the likely trophic interaction for all reef fish species.
+
+## Working environment 
+
+```{r}
+sessionInfo()
 ```
-
-You'll still need to render `README.Rmd` regularly, to keep `README.md` up-to-date.
-
-You can also embed plots, for example:
-
-```{r pressure, echo = FALSE}
-plot(pressure)
-```
-
-In that case, don't forget to commit and push the resulting figure files, so they display on GitHub!
