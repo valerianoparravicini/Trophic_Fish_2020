@@ -1,278 +1,142 @@
-library(plyr)
-library(dplyr)
-library(tidyverse)
-library(vegan)
-library(nlme)
-library(lme4)
-library(ggpubr)
-library(ggrepel)
-library(colorRamps)
-library(tidybayes)
-library(brms)
-library(fishualize)
-library(modelr)
-library(beepr)
-library(png)
-library(grid)
-library(scales)
-library(iNEXT)
-library(geomnet)
-library(GGally)
-library(extrafont)
 
-make_networkplots <-
-  function(modules, diets_p){
+# --- >> dataset load and standardization
 
-theme_sjb <- function (base_size = 8, base_family = "") {
-  theme_bw() %+replace% 
-    theme(panel.background = element_blank(),
-          panel.border = element_blank(),
-          axis.line = element_line(color = "black"),
-          axis.ticks = element_line(color = "black"),
-          axis.text = element_text(color = "black", size = 8, family = "Arial"),
-          axis.title = element_text(color = "black", size = 8, family = "Arial"),
-          legend.title=element_text(size=8), 
-          legend.text=element_text(size=8))
-}
+diets <- read.csv("data/data_guts.csv", sep=",", dec=".", row.names=1, na = "NA") 
 
 
-diets_p <-diets_p %>%
-  mutate(genspe = rownames(diets_p))
+#check_taxonomy <- rfishbase::validate_names(unique(diets$fish_sp))
+#unique(subset(diets$fish_sp, !(diets$fish_sp %in% check_taxonomy)))
 
-mod_predators <- modules$mod_predators %>% as.data.frame()
-mod_prey_items <- modules$mod_prey_items  %>% as.data.frame()
-
-fish.clusters <- as.data.frame(mod_predators) %>%
-  dplyr::rename(genspe = V1, fishcluster = V2) %>%
-  mutate(fishcluster = dplyr::recode(as.character(fishcluster), "7" = "1",
-                                     "3" = "2",
-                                     "4" = "3",
-                                     "1" = "4",
-                                     "8" = "5",
-                                     "6" = "6",
-                                     "2" = "7",
-                                     "5" = "8"))
-
-prey.clusters <- as.data.frame(mod_prey_items) %>%
-  dplyr::rename(prey = V1, preycluster = V2)
-
-
-diet.matrix <- diets_p %>%
-  select(genspe, everything())
+diets$fish_sp <- dplyr::recode(diets$fish_sp, 
+                               "Apogon ellioti" = "Jaydia ellioti",               
+                               "Neomyxus chaptalii" = "Neomyxus leuciscus",
+                               "Zebrasoma veliferum" = "Zebrasoma velifer",
+                               "Epinephelus macrosplos" = "Epinephelus macrospilos",
+                               "Labracinus melanotaenia" = "Labracinus cyclophthalmus",
+                               "Sargocentron spniferum" = "Sargocentron spiniferum",
+                               "Parapercis cephalopunctata" = "Parapercis millepunctata",
+                               "Tylosurus acus" = "Tylosurus acus acus",
+                               "Archamia fucata" = "Taeniamia fucata",
+                               "Chromis caerulea" = "Chromis ternatensis",
+                               "Arothron hispdus" = "Arothron hispidus",
+                               "Dasyatis americana" = "Hypanus americanus", # this is a stingray btw
+                               "Apogon hyalosoma" ="Yarica hyalosoma"
+)
 
 
-# meta.23s <- sub23s.loc[c(1:3)]
-diet.network <- diet.matrix %>%
-  tidyr::pivot_longer(cols = 2:39, names_to = "prey") %>%
-  dplyr::filter(value > 0) %>%
-  dplyr::left_join(fish.clusters, by = "genspe") %>%
-  dplyr::full_join(prey.clusters, by = "prey") %>%
-  dplyr::group_by(fishcluster, prey, preycluster) %>%
-  dplyr::summarize(sum.prop = mean(value)) %>%
-  ungroup() %>%
-  mutate(fishcluster = as.factor(fishcluster)) %>%
-  filter(sum.prop > 0.0)
+diets_p <- reshape::cast(diets, fish_sp ~ grp, value = "quantity", fun.aggregate=sum)
+
+diets_p[is.na(diets_p)] = 0
+
+diets_samplesize <- sapply(as.character(unique(diets_p$fish_sp)), function(x) {sum(diets[diets$fish_sp == x,]$nb_guts)})
+
+min_samplesize <- 5
+
+diets_p <- diets_p[diets_p$fish_sp%in% names(diets_samplesize[diets_samplesize >=min_samplesize]),]
+species <- diets_p[,1]
+diets_p <- diets_p[,2:ncol(diets_p)]
+
+sum_row <- rowSums(diets_p)
+
+diets_p <- lapply(1:length(sum_row), function(r) {diets_p[r,]/sum_row[r]})
+diets_p <- do.call(rbind, diets_p)
+
+rownames(diets_p) <- species 
+
+diets_p <- na.omit(diets_p)
 
 
+# --- >> create 500 classifications according to modularity maximization
 
-trophic.network <- ggplot(data = diet.network) +
-  geom_net(layout.alg = "circle", aes(from_id = prey, to_id = fishcluster,  linewidth = sum.prop*4), 
-           labelon = T, repel = TRUE, curvature = 0,directed = F, arrowgap = 0.001, arrowsize = 0.01) +
-  theme_net() +
-  theme(legend.position = "none")
-trophic.network
-
-ggsave("plots/networkplot_raw.pdf", trophic.network, width = 15, height = 15, useDingbats = F)
-
-
-
-families <- read.csv(file = "data/diet_families.csv") %>%
-  right_join(fish.clusters) %>%
-  group_by(family, fishcluster) %>%
-  summarize(total_n = n()) %>%
-  ungroup() %>%
-  group_by(fishcluster) %>%
-  mutate(percent_fam = total_n/sum(total_n)) %>%
-  filter(percent_fam > 0.02) %>%
-  drop_na()
+clusters <- parallel::mclapply(1:500, function(i) {
+  
+  cat(i, "\n")
+  set.seed(i)
+  
+  bipartite::computeModules(t(diets_p))
+  
+}, mc.cores = 50)#eo mclapply clusters
 
 
-c = do.call(colorRampPalette(c("darkblue", "cyan")),list(10))
+# numper of modules 
+
+n_mod <- sapply(clusters, function(x) {
+  
+  length(bipartite::listModuleInformation(x)[[2]])
+  
+})#eo sapply n_mod
 
 
-clus1 <- families %>%
-  filter(fishcluster == 1) %>%
-  mutate(colorvector = do.call(colorRampPalette(c("deeppink4", "lightpink")),list(length(family)))) 
-clus1plot <- ggplot(clus1, aes(x = "", y = percent_fam, fill = family)) +
-  geom_bar(width = 1, stat = "identity", color = "black", size = 0.2) +
-  coord_polar("y", start=0) +
-  scale_fill_manual(values = clus1$colorvector) +
-  theme_sjb() + theme(panel.grid.major = element_blank(), 
-                      panel.grid.minor = element_blank(),
-                      axis.text.x = element_blank(),
-                      axis.text.y = element_blank(),
-                      axis.line = element_blank(),
-                      axis.title.x = element_blank(),
-                      axis.title.y = element_blank(),
-                      axis.ticks = element_blank(),
-                      legend.position = "right")
-clus1plot
+# --- >> find module ID for predators
 
-clus2 <- families %>%
-  filter(fishcluster == 2) %>%
-  mutate(colorvector = do.call(colorRampPalette(c("darkgreen", "chartreuse")),list(length(family))))
+pred_modules <- parallel::mclapply(clusters, function(x) {
+  
+  mat_memb <- x@modules[2:nrow(x@modules), 2:ncol(x@modules)]
+  
+  sapply(1:ncol(mat_memb), function (i) {
+    
+    which(mat_memb [,i] == max(mat_memb [,i]))
+    
+  })#eo sapply 
+  
+}, mc.cores = 50)#eo mclapply pred_modules
+
+
+# --- >> define the medoid solutions according to VII statistics of Meila (2007)
+
+
+combinations <- expand.grid(1:500, 1:500)
+
+
+vii <- parallel::mclapply(1:nrow(combinations), function (x) {
+  
+  mcclust::vi.dist(pred_modules[[combinations[x,1]]], pred_modules[[combinations[x,2]]], parts = FALSE, base = 2)
+  
+}, mc.cores = 50)#eo mclapply vii
 
 
 
-clus2plot <-  ggplot(clus2, aes(x = "", y = percent_fam, fill = family)) +
-  geom_bar(width = 1, stat = "identity", color = "black", size = 0.2) +
-  coord_polar("y", start=0) +
-  scale_fill_manual(values = clus2$colorvector) +
-  theme_sjb() + theme(panel.grid.major = element_blank(), 
-                      panel.grid.minor = element_blank(),
-                      axis.text.x = element_blank(),
-                      axis.text.y = element_blank(),
-                      axis.line = element_blank(),
-                      axis.title.x = element_blank(),
-                      axis.title.y = element_blank(),
-                      axis.ticks = element_blank(),
-                      legend.position = "right")
-clus2plot
+vii_per_cluster <- data.frame(x = combinations[,1], y = combinations[,2], vii = do.call(rbind,vii))
+
+cast_vii <- reshape::cast(vii_per_cluster, x ~ y, value = "vii")
+
+medoid <- which(colMeans(cast_vii) == min(colMeans(cast_vii)))
+#medoid <- which(colMeans(cast_vii) == max(colMeans(cast_vii)))
 
 
-clus3 <- families %>%
-  filter(fishcluster == 3) %>%
-  mutate(colorvector = do.call(colorRampPalette(c("darkblue", "lightblue1")),list(length(family))))
+medoid_guilds = clusters[[medoid]]
 
-clus3plot <-  ggplot(clus3, aes(x = "", y = percent_fam, fill = family)) +
-  geom_bar(width = 1, stat = "identity", color = "black", size = 0.2) +
-  coord_polar("y", start=0) +
-  scale_fill_manual(values = clus3$colorvector) +
-  theme_sjb() + theme(panel.grid.major = element_blank(), 
-                      panel.grid.minor = element_blank(),
-                      axis.text.x = element_blank(),
-                      axis.text.y = element_blank(),
-                      axis.line = element_blank(),
-                      axis.title.x = element_blank(),
-                      axis.title.y = element_blank(),
-                      axis.ticks = element_blank(),
-                      legend.position = "right")
-clus3plot
-
-clus4 <- families %>%
-  filter(fishcluster == 4) %>%
-  mutate(colorvector = do.call(colorRampPalette(c("darkred", "salmon1")),list(length(family))))
+resList <- bipartite::listModuleInformation(medoid_guilds)
 
 
 
-clus4plot <-  ggplot(clus4, aes(x = "", y = percent_fam, fill = family)) +
-  geom_bar(width = 1, stat = "identity", color = "black", size = 0.2) +
-  coord_polar("y", start=0) +
-  scale_fill_manual(values = clus4$colorvector) +
-  theme_sjb() + theme(panel.grid.major = element_blank(), 
-                      panel.grid.minor = element_blank(),
-                      axis.text.x = element_blank(),
-                      axis.text.y = element_blank(),
-                      axis.line = element_blank(),
-                      axis.title.x = element_blank(),
-                      axis.title.y = element_blank(),
-                      axis.ticks = element_blank(),
-                      legend.position = "right")
-clus4plot
-
-clus5 <- families %>%
-  filter(fishcluster == 5) %>%
-  mutate(colorvector = do.call(colorRampPalette(c("turquoise4", "paleturquoise1")),list(length(family))))
-
-clus5plot <-  ggplot(clus5, aes(x = "", y = percent_fam, fill = family)) +
-  geom_bar(width = 1, stat = "identity", color = "black", size = 0.2) +
-  coord_polar("y", start=0) +
-  scale_fill_manual(values = clus5$colorvector) +
-  theme_sjb() + theme(panel.grid.major = element_blank(), 
-                      panel.grid.minor = element_blank(),
-                      axis.text.x = element_blank(),
-                      axis.text.y = element_blank(),
-                      axis.line = element_blank(),
-                      axis.title.x = element_blank(),
-                      axis.title.y = element_blank(),
-                      axis.ticks = element_blank(),
-                      legend.position = "right")
-clus5plot
+# --- >> extract and save modules information
 
 
-clus6 <- families %>%
-  filter(fishcluster == 6) %>%
-  mutate(colorvector = do.call(colorRampPalette(c("saddlebrown", "burlywood1")),list(length(family))))
-
-clus6plot <- ggplot(clus6, aes(x = "", y = percent_fam, fill = family)) +
-  geom_bar(width = 1, stat = "identity", color = "black", size = 0.2) +
-  coord_polar("y", start=0) +
-  scale_fill_manual(values = clus6$colorvector) +
-  theme_sjb() + theme(panel.grid.major = element_blank(), 
-                      panel.grid.minor = element_blank(),
-                      axis.text.x = element_blank(),
-                      axis.text.y = element_blank(),
-                      axis.line = element_blank(),
-                      axis.title.x = element_blank(),
-                      axis.title.y = element_blank(),
-                      axis.ticks = element_blank(),
-                      legend.position = "right")
-clus6plot
-
-clus7 <- families %>%
-  filter(fishcluster == 7) %>%
-  mutate(colorvector = do.call(colorRampPalette(c("purple4", "lavender")),list(length(family))))
+# print results
+bipartite::printoutModuleInformation(medoid_guilds)
 
 
+getModules_predators <- lapply(1:length(resList[[2]]), function(x) {
+  
+  cbind(resList[[2]][[x]][[2]], rep(x, length(resList[[2]][[x]][[2]])))
+  
+  
+})
 
-clus7plot <-  ggplot(clus7, aes(x = "", y = percent_fam, fill = family)) +
-  geom_bar(width = 1, stat = "identity", color = "black", size = 0.2) +
-  coord_polar("y", start=0) +
-  scale_fill_manual(values = clus7$colorvector) +
-  theme_sjb() + theme(panel.grid.major = element_blank(), 
-                      panel.grid.minor = element_blank(),
-                      axis.text.x = element_blank(),
-                      axis.text.y = element_blank(),
-                      axis.line = element_blank(),
-                      axis.title.x = element_blank(),
-                      axis.title.y = element_blank(),
-                      axis.ticks = element_blank(),
-                      legend.position = "right")
-clus7plot
+getModules_prey <- lapply(1:length(resList[[2]]), function(x) {
+  
+  cbind(resList[[2]][[x]][[1]], rep(x, length(resList[[2]][[x]][[1]])))
+  
+  
+})
 
 
-clus8 <- families %>%
-  filter(fishcluster == 8) %>%
-  mutate(colorvector = do.call(colorRampPalette(c("darkorange3", "yellow1")),list(length(family))))
+mod_predators <- do.call(rbind, getModules_predators)
+mod_prey_items <- do.call(rbind, getModules_prey)
 
-clus8plot <-  ggplot(clus8, aes(x = "", y = percent_fam, fill = family)) +
-  geom_bar(width = 1, stat = "identity", color = "black", size = 0.2) +
-  coord_polar("y", start=0) +
-  scale_fill_manual(values = clus8$colorvector) +
-  theme_sjb() + theme(panel.grid.major = element_blank(), 
-                      panel.grid.minor = element_blank(),
-                      axis.text.x = element_blank(),
-                      axis.text.y = element_blank(),
-                      axis.line = element_blank(),
-                      axis.title.x = element_blank(),
-                      axis.title.y = element_blank(),
-                      axis.ticks = element_blank(),
-                      legend.position = "right")
-clus8plot
+save(mod_predators, mod_prey_items, file = "results/trophic_guilds_medoid.RData")
 
+write.csv(mod_predators, "results/mod_predators.csv", row.names = FALSE)
+write.csv(mod_prey_items, "results/mod_prey_items.csv", row.names = FALSE)
 
-piecharts = ggarrange(clus1plot, clus2plot, clus3plot, clus4plot, 
-                      clus5plot, clus6plot, clus7plot, clus8plot,
-                      nrow = 2, ncol = 4, legend = "none")
-
-piecharts
-
-ggsave("plots/piecharts.pdf", piecharts, width = 10, height = 10, useDingbats = F)
-
-piechartlegends = ggarrange(clus1plot, clus2plot, clus3plot, clus4plot, 
-                            clus5plot, clus6plot, clus7plot, clus8plot,
-                            nrow = 2, ncol = 4, legend = "right")
-
-ggsave("plots/piechartslegends.pdf", piechartlegends, width = 10, height = 10, useDingbats = F)
-
-}
