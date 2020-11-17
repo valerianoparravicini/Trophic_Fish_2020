@@ -1,8 +1,6 @@
 
 diets <- read.csv("data/data_guts.csv", sep=",", dec=".", row.names=1, na = "NA") 
 
-#check_taxonomy <- rfishbase::validate_names(unique(diets$fish_sp))
-#unique(subset(diets$fish_sp, !(diets$fish_sp %in% check_taxonomy)))
 
 diets$fish_sp <- dplyr::recode(diets$fish_sp, 
                                "Apogon ellioti" = "Jaydia ellioti",               
@@ -64,16 +62,6 @@ save(eig, file="results/phylo_eig.RData")
 all_species <- read.csv("data/all_reef_fish.csv", sep=",", dec=".",  na = "NA")
 our_sp <- unique(d_long$predator)
 
-#sizemax <- rfishbase::species(gsub("_" , " ", sp_extra$species))
-#sizemax <- pull(species(gsub("_", " ", (diet_cat$species)), fields = "Length"), Length)
-#size_our_sp <- sizemax[sizemax$Species %in% gsub("_" , " ", our_sp ),]$Length
-
-# add missing ones manually
-#diet_cat[diet_cat$species == "Antennablennius velifer", "sizemax"] <- 7
-#diet_cat[diet_cat$species == "Ostorhinchus aroubiensis", "sizemax"] <- 12
-#diet_cat[diet_cat$species == "Acanthurus bahianus", "sizemax"] <- 38
-
-#pcoa_our_sp <- pcoa$points[rownames(pcoa$points) %in% our_sp,] 
 
 em_e <- eig$u
 em_our_sp <- em_e[rownames(em_e) %in% our_sp,] 

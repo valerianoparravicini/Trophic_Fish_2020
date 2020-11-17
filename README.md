@@ -4,33 +4,74 @@
 # Global gut content data synthesis and phylogeny delineate reef fish trophic guilds
 
 This repository contains code and data needed to reproduce the figures
-and result of the manuscript:
+and results of the manuscript: “Global gut content data synthesis and
+phylogeny delineate reef fish trophic guilds” (ADD REF)
 
-FULL REFERENCE AND DOI
+## Instructions
+
+All analyses were done in `R`. First you need to open an R session with
+working directory set to the root of the project.
+
+We use a number of packages as listed in the DESCRIPTION, missing
+packages can be easily installed by devtools:  
+`devtools::install_deps()`  
+(run `install.packages("devtools")` to install devtools if needed.)
+
+Then the entire project can be reproduced by running the file `make.R`
+or scripts can be run seperately.  
+:exclamation: :boom: **CAUTION**: The script depends on parallel
+computation and uses up to **50 cores** and **250G** of memory, and thus
+should be run on a supercomputer. It takes about one week to reproduce
+the entire project.
 
 ## Content
 
 The directory contains:  
-\- [:page\_facing\_up: DESCRIPTION](/DESCRIPTION):  
+\- [:page\_facing\_up: DESCRIPTION](/DESCRIPTION): Contains all packages
+needed to reproduce the analyses.  
 \- [:page\_facing\_up: make.R](/make.R): Script to reproduce all parts
 of the project.  
 \- [:file\_folder: data](/data): Folder containing all data.  
 \- [:file\_folder: scripts](/scripts): Folder containing scripts to
 perform multiple parts of the analysis to produce results and figures.  
+\- [:file\_folder: R](/R): Folder containing custom functions used to
+perform phylogenetic regression.  
 \- [:file\_folder: output](/output): Folder containing all results and
 figures.
 
+### data
+
+  - **original\_expert\_classification.csv**:  
+    Trophic classifications, originating from 33 publications.
+  - **converted\_expert\_classification.csv**:  
+    Modified trophic classifications to compare trophic guilds across
+    publications. We standardized by converting the original trophic
+    categories into five broad trophic guilds: herbivores and
+    detritivores, invertivores, omnivores, planktivores, and
+    piscivores.  
+  - **data\_guts.csv**:  
+    Dietary data from five published works: Hiatt & Strasburg (1960) for
+    the Marshall Islands, Randall (1967) for Puerto Rico and the Virgin
+    Islands, Hobson (1974) for Hawaii, Harmelin-Vivien (1979) for
+    Madagascar, and Sano et al. (1984) for Okinawa. In addition, we
+    provide hitherto unpublished data on the gut contents of 3,015
+    individuals of 111 species collected in New Caledonia from 1984 to
+    2000. Prey items were grouped into 38 ecologically informative prey
+    groups.  
+  - **all\_reef\_fish.csv**  
+    Global list of global reef fish species, used for extrapolation.
+
 ### scripts
 
-  - **01\_guilds\_compare\_experts.R**: We conducted a systematic review
-    in the literature to collect information about how different authors
-    have classified reef fish species into different trophic guilds. We
-    could obtain 30 distinct classifications and this information is
-    contained in the file “data/original\_experts\_classification.csv”.
-    These data were then made comparable (see
-    “data/converted\_experts\_classification.csv”. The script compares
-    pairs of experts and quantify the agreement/disagreement among
-    them.  
+  - **01\_guilds\_compare\_experts.R**:  
+    We conducted a systematic review in the literature to collect
+    information about how different authors have classified reef fish
+    species into different trophic guilds. We could obtain 30 distinct
+    classifications and this information is contained in the file
+    “data/original\_experts\_classification.csv”. These data were then
+    made comparable (see “data/converted\_experts\_classification.csv”.
+    The script compares pairs of experts and quantify the
+    agreement/disagreement among them.  
   - **02\_global\_network\_guilds\_site\_specific.R**:  
     This script defines the diet for each combination of reef fish
     species and site. Then we used the method introduced by Becket
@@ -72,6 +113,22 @@ networks. Royal Society open science 3, 140536.
     the functions needed to check the model performance (e.g. AUC, TSS)
     and to extrapolate the likely trophic interaction for all reef fish
     species.
+
+  - **07\_phylogenetic\_multinomial\_model\_and\_extrapolation.R** This
+    script performs a phylogenetic regression to predict the
+    probabilities of trophic guilds for each species, as well as the
+    extrapolation to global reef fishes.
+
+  - **08\_network\_plot\_diets.R**  
+    This script contains code to reproduce all elements of figure 3.
+
+  - **09\_plot\_phylotree.R**  
+    This script contains code to reproduce all elements of figure 4.
+
+## How to download this project for people not familiar with GitHub:
+
+On the project main page on GitHub, click on the green button clone or
+download and then click on Download ZIP.
 
 ## Working environment
 

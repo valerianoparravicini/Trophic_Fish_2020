@@ -26,19 +26,19 @@ dat <- as.h2o(da)
 y <- "quantity"
 
 #extreme gradient boosting
-dir.create(paste0(getwd(),"/results/xgb"))
+dir.create(paste0(getwd(),"/output/results/xgb"))
 m.xgb <- h2o.xgboost(y = y, training_frame = dat,  nfolds = 10, seed = 1, ntrees = 2000, booster = "dart",
                        keep_cross_validation_predictions=TRUE)
 xgb_path <- h2o.saveModel(object = m.xgb, path = paste0(getwd(),"/results/xgb"), force = TRUE)
 
 #gradient boosting
-dir.create(paste0(getwd(),"/results/gbm"))
+dir.create(paste0(getwd(),"/output/results/gbm"))
 m.gbm <- h2o.gbm(y = y, training_frame = dat,  nfolds = 10, seed = 1, ntrees = 2000,
                  keep_cross_validation_predictions=TRUE)
 gbm_path <- h2o.saveModel(object = m.gbm, path = paste0(getwd(),"/results/gbm"), force = TRUE)
 
 #random forest
-dir.create(paste0(getwd(),"/results/rf"))
+dir.create(paste0(getwd(),"/output/results/rf"))
 m.rf <- h2o.randomForest(y = y, training_frame = dat,  nfolds = 10, seed = 1, ntrees = 2000,
                          keep_cross_validation_predictions=TRUE)
 rf_path <- h2o.saveModel(object = m.rf, path = paste0(getwd(),"/results/rf"), force = TRUE)
@@ -52,7 +52,7 @@ ensemble <- h2o.stackedEnsemble(y = y,
                                 base_models = list (m.xgb, m.gbm, m.rf), seed=1)
 
 
-dir.create(paste0(getwd(),"/results/ensemble"))
+dir.create(paste0(getwd(),"/output/results/ensemble"))
 ens_path <- h2o.saveModel(object =ensemble, path = paste0(getwd(),"/results/ensemble"), force = TRUE)
 
 

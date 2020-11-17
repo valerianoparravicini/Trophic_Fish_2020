@@ -591,7 +591,7 @@ extrapolate <- function(b, r_phylo){
     
     return(diet_ex)
     
-  }, mc.cores = 50) %>% plyr::ldply()
+  }, mc.cores = 6) %>% plyr::ldply()
   
   
   
@@ -603,7 +603,7 @@ extrapolate <- function(b, r_phylo){
                            p6 = sm[6], p7 = sm[7], p8 = sm[8])  
       result$nentropy <- 1 - nentropy(result[,3:10])
       return(result)
-    }, mc.cores = 50) %>% plyr::ldply()
+    }, mc.cores = 10) %>% plyr::ldply()
   
   
   write.csv(extrap, "results/dietalldraws_reg.csv", row.names = FALSE)
@@ -663,7 +663,7 @@ summarize_extrapolation <- function(dietall){
       sub <- dietall[x,]
       sm <- softmax(c(sub$mu1, sub$mu2, sub$mu3, sub$mu4, sub$mu5))
       return(data.frame(species = sub$species, family = sub$Family, p1 = sm[1], p2 = sm[2], p3 = sm[3], p4 = sm[4], p5 = sm[5]))
-    }, mc.cores = 50) %>% plyr::ldply()
+    }, mc.cores = 30) %>% plyr::ldply()
   
   
   probs$nentropy <- 1 - nentropy(probs[,3:7])

@@ -52,7 +52,7 @@ clusters <- parallel::mclapply(1:500, function(i) {
   
   bipartite::computeModules(t(diets_p))
   
-}, mc.cores = 50)#eo mclapply clusters
+}, mc.cores = 40)#eo mclapply clusters
 
 
 # numper of modules 
@@ -76,7 +76,7 @@ pred_modules <- parallel::mclapply(clusters, function(x) {
     
   })#eo sapply 
   
-}, mc.cores = 50)#eo mclapply pred_modules
+}, mc.cores = 40)#eo mclapply pred_modules
 
 
 # --- >> define the medoid solutions according to VII statistics of Meila (2007)
@@ -89,7 +89,7 @@ vii <- parallel::mclapply(1:nrow(combinations), function (x) {
   
   mcclust::vi.dist(pred_modules[[combinations[x,1]]], pred_modules[[combinations[x,2]]], parts = FALSE, base = 2)
   
-}, mc.cores = 50)#eo mclapply vii
+}, mc.cores = 40)#eo mclapply vii
 
 
 
@@ -130,6 +130,43 @@ getModules_prey <- lapply(1:length(resList[[2]]), function(x) {
 
 mod_predators <- do.call(rbind, getModules_predators)
 mod_prey_items <- do.call(rbind, getModules_prey)
+
+colnames(mod_predators) <- c("species", "cluster")
+colnames(mod_prey_items) <- c("prey_item", "cluster")
+
+# Standardize category numbers 
+# motivation: numbers of clusters are random each time analysis is run
+library(tidyverse)
+
+ref <- # reference dataframe with species
+  data.frame(
+    species = c(
+      "Cephalopholis argus",
+      "Parupeneus multifasciatus",
+      "Acanthurus lineatus",
+      "Chaetodon ornatissimus",
+      "Abudefduf sexfasciatus",
+      "Balistapus undulatus",
+      "Ostracion meleagris",
+      "Stethojulis bandanensis"),
+    ref = c(4, 7, 2, 3, 8, 6, 1, 5)
+  ) %>% 
+  dplyr::mutate(species = as.character(species))
+
+ref <- mod_predators %>%
+  dplyr::inner_join(ref) %>%
+  dplyr::select(-species)
+  
+mod_predators <- as.data.frame(mod_predators) %>%
+  dplyr::left_join(ref) %>%
+  dplyr::select(-cluster) %>%
+  dplyr::rename(cluster = ref)
+
+mod_prey_items <- as.data.frame(mod_prey_items) %>%
+  dplyr::left_join(ref) %>%
+  dplyr::select(-cluster) %>%
+  dplyr::rename(cluster = ref)
+
 
 # Save results
 save(mod_predators, mod_prey_items, file = "output/results/trophic_guilds_medoid.RData")

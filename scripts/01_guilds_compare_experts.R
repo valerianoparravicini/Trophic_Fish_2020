@@ -1,4 +1,9 @@
+# Load packages
+library(ggplot2)
+library(tidyverse)
+library(fishualize)
 
+# read data
 expert <- read.csv("data/converted_experts_classification.csv")
 
 
@@ -104,9 +109,6 @@ accuracies_class_values_wm <- apply(accuracies_class_values_wm,2, function(x) {
 
 h = hist(overall_accuracy, plot=FALSE)
 
-library(ggplot2)
-library(tidyverse)
-library(fishualize)
 
 df <- data.frame(
   overall_accuracy = overall_accuracy,
