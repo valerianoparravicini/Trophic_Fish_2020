@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# Global gut content data synthesis and phylogeny delineate reef fish trophic guilds
+# Delineating reef fish trophic guilds with global gut content data synthesis and phylogeny
 
 This repository contains code and data needed to reproduce the figures
 and results of the manuscript: “Global gut content data synthesis and
